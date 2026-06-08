@@ -1,4 +1,3 @@
-
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0f0f1e);
 scene.fog = new THREE.Fog(0x0f0f1e, 800, 1500);
@@ -12,10 +11,9 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.outputEncoding = THREE.sRGBEncoding; 
+renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
-
 
 const gameState = {
     score: 0,
@@ -29,103 +27,6 @@ const keys = {};
 let cameraAngle = 0;
 
 const obstacles = [];
-
-
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-let hoveredObjek = null;
-
-const tooltip = document.createElement('div');
-tooltip.id = 'hoverTooltip';
-tooltip.style.cssText = `
-    position: absolute; pointer-events: none; z-index: 500;
-    background: rgba(0,0,0,0.8); border: 1px solid #00ff88;
-    border-radius: 6px; padding: 5px 10px; color: #00ff88;
-    font-size: 13px; font-weight: bold; display: none;
-    transition: opacity 0.15s;
-`;
-document.getElementById('gameContainer').appendChild(tooltip);
-
-canvas.addEventListener('mousemove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
-    mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
-
-    tooltip.style.left = (e.clientX + 14) + 'px';
-    tooltip.style.top  = (e.clientY - 10) + 'px';
-});
-
-canvas.addEventListener('click', () => {
-    if (hoveredObjek && !hoveredObjek.dikumpulkan) {
-        const idx = objekKumpul.indexOf(hoveredObjek);
-        if (idx !== -1) {
-            const posKumpul = hoveredObjek.getPosition();
-            const dist = mobil.getPosition().distanceTo(posKumpul);
-            if (dist < 20) {
-                hoveredObjek.remove();
-                gameState.collected++;
-                gameState.combo++;
-                gameState.score += 100 * gameState.combo;
-                buatEfekKumpul(posKumpul);
-                const newX = (Math.random() - 0.5) * 280;
-                const newZ = (Math.random() - 0.5) * 280;
-                objekKumpul[idx] = new ObjekKumpul(newX, newZ);
-                hoveredObjek = null;
-                tooltip.style.display = 'none';
-            } else {
-  
-                tooltip.textContent = '❌ Terlalu jauh!';
-                tooltip.style.borderColor = '#ff4444';
-                tooltip.style.color = '#ff4444';
-                tooltip.style.display = 'block';
-                setTimeout(() => { tooltip.style.display = 'none'; tooltip.style.borderColor = '#00ff88'; tooltip.style.color = '#00ff88'; }, 800);
-            }
-        }
-    }
-});
-
-function updateHover() {
-    raycaster.setFromCamera(mouse, camera);
-
-    const meshes = objekKumpul
-        .filter(o => !o.dikumpulkan)
-        .map(o => ({ objek: o, mesh: o.mesh }));
-
-    const targets = meshes.map(m => m.mesh);
-    const intersects = raycaster.intersectObjects(targets, false);
-
-    if (intersects.length > 0) {
-        const hitMesh = intersects[0].object;
-        const found = meshes.find(m => m.mesh === hitMesh);
-        if (found) {
-            if (hoveredObjek !== found.objek) {
-                if (hoveredObjek) {
-                    hoveredObjek.mesh.material.emissiveIntensity = 0.5;
-                    hoveredObjek.group.scale.setScalar(1.0);
-                }
-                hoveredObjek = found.objek;
-            }
-            hoveredObjek.mesh.material.emissiveIntensity = 1.5;
-            hoveredObjek.group.scale.setScalar(1.25);
-
-            const dist = Math.round(mobil.getPosition().distanceTo(hoveredObjek.getPosition()));
-            const bisa = dist < 20;
-            tooltip.textContent = bisa ? `✅ Klik untuk kumpulkan! (${dist}m)` : `🚗 Dekati dulu... (${dist}m)`;
-            tooltip.style.borderColor = bisa ? '#00ff88' : '#ffb703';
-            tooltip.style.color = bisa ? '#00ff88' : '#ffb703';
-            tooltip.style.display = 'block';
-            canvas.style.cursor = bisa ? 'pointer' : 'not-allowed';
-        }
-    } else {
-        if (hoveredObjek) {
-            hoveredObjek.mesh.material.emissiveIntensity = 0.5;
-            hoveredObjek.group.scale.setScalar(1.0);
-            hoveredObjek = null;
-        }
-        tooltip.style.display = 'none';
-        canvas.style.cursor = 'default';
-    }
-}
 
 class Mobil {
     constructor() {
@@ -160,79 +61,93 @@ class Mobil {
     }
 
     tryLoadGLB() {
+
         if (typeof THREE.GLTFLoader === 'undefined') {
+            console.warn('GLTFLoader belum tersedia, coba lagi 500ms...');
             setTimeout(() => this.tryLoadGLB(), 500);
             return;
         }
 
-        this.showToast('⏳ Memuat mobil.glb...', '#00d4ff');
+        this.showToast('⏳ Memuat Mobil.glb...', '#00d4ff');
+        const loader = new THREE.GLTFLoader();
 
-        const paths = ['mobil.glb', './mobil.glb', 'Mobil.glb', './Mobil.glb'];
+        loader.load(
+            './Mobil.glb',
 
-        const tryNext = (i) => {
-            if (i >= paths.length) {
-                this.showToast('❌ mobil.glb tidak ditemukan!', '#ff4444');
-                return;
-            }
-            fetch(paths[i], { cache: 'no-cache' })
-                .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-                .then(buf => {
-                    const loader = new THREE.GLTFLoader();
-                    loader.parse(buf, '', (gltf) => this._applyGLB(gltf), (e) => {
-                        console.error('Parse error:', e);
-                        this.showToast('❌ File GLB tidak valid', '#ff4444');
-                    });
-                })
-                .catch(() => tryNext(i + 1));
-        };
+            (gltf) => {
+                const model = gltf.scene;
 
-        tryNext(0);
-    }
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        child.visible = true;
 
-    _applyGLB(gltf) {
-        const model = gltf.scene;
+                        if (!child.material) {
+                            child.material = new THREE.MeshStandardMaterial({
+                                color: 0xff0055, metalness: 0.5, roughness: 0.4,
+                            });
+                        }
 
-        model.traverse((child) => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-                child.visible = true;
-                if (!child.material) {
-                    child.material = new THREE.MeshStandardMaterial({ color: 0xff0055, metalness: 0.5, roughness: 0.4 });
-                }
-                const mats = Array.isArray(child.material) ? child.material : [child.material];
-                mats.forEach((mat) => {
-                    mat.transparent = false; mat.opacity = 1.0;
-                    mat.depthWrite = true; mat.side = THREE.FrontSide; mat.needsUpdate = true;
-                    if (mat.color && mat.color.r === 0 && mat.color.g === 0 && mat.color.b === 0) mat.color.set(0xcccccc);
+                        const mats = Array.isArray(child.material) ? child.material : [child.material];
+                        mats.forEach((mat) => {
+                            mat.transparent = false;
+                            mat.opacity = 1.0;
+                            mat.depthWrite = true;
+                            mat.side = THREE.FrontSide;
+                            mat.needsUpdate = true;
+                            if (mat.color && mat.color.r === 0 && mat.color.g === 0 && mat.color.b === 0) {
+                                mat.color.set(0xcccccc);
+                            }
+                        });
+                    }
                 });
+
+                const box = new THREE.Box3().setFromObject(model);
+                const size = new THREE.Vector3();
+                box.getSize(size);
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const targetSize = 4;
+                const scale = targetSize / maxDim;
+                model.scale.setScalar(scale);
+
+                const box2 = new THREE.Box3().setFromObject(model);
+                const center = new THREE.Vector3();
+                box2.getCenter(center);
+                model.position.sub(center);
+                model.position.y += box2.getSize(new THREE.Vector3()).y / 2;
+
+                if (this.fallbackModel) {
+                    this.group.remove(this.fallbackModel);
+                    this.fallbackModel = null;
+                }
+
+                this.glbModel = model;
+                this.group.add(model);
+                this.isGLBLoaded = true;
+
+                this.showToast('✅ Model mobil berhasil dimuat!', '#00ff88');
+                console.log('✅ Mobil.glb berhasil dimuat, skala:', scale.toFixed(3));
+            },
+
+            (xhr) => {
+                if (xhr.total > 0) {
+                    const pct = Math.round(xhr.loaded / xhr.total * 100);
+                    this.showToast(`⏳ Memuat... ${pct}%`, '#00d4ff');
+                }
+            },
+
+            (error) => {
+                const msg = error.message || error;
+                console.error('❌ Gagal load Mobil.glb:', msg);
+                this.showToast('❌ Mobil.glb tidak ditemukan — pastikan file ada di folder proyek', '#ff4444');
             }
-        });
-
-        const box = new THREE.Box3().setFromObject(model);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        const scale = 4 / (Math.max(size.x, size.y, size.z) || 1);
-        model.scale.setScalar(scale);
-
-        const box2 = new THREE.Box3().setFromObject(model);
-        const center = new THREE.Vector3();
-        box2.getCenter(center);
-        model.position.sub(center);
-        model.position.y += box2.getSize(new THREE.Vector3()).y / 2;
-
-        if (this.fallbackModel) { this.group.remove(this.fallbackModel); this.fallbackModel = null; }
-        this.glbModel = model;
-        this.group.add(model);
-        this.isGLBLoaded = true;
-        this.showToast('✅ Model mobil berhasil dimuat!', '#00ff88');
-        console.log('✅ mobil.glb loaded, scale:', scale.toFixed(3));
+        );
     }
 
     createFallbackModel() {
         const group = new THREE.Group();
 
-  
         const bodyGeo = new THREE.BoxGeometry(2, 1.5, 4);
         const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff0055, metalness: 0.6, roughness: 0.3 });
         this.body = new THREE.Mesh(bodyGeo, bodyMat);
@@ -310,6 +225,7 @@ class Mobil {
             move.z -= forwardZ * this.acceleration;
         }
         if (kiri) {
+
             this.group.rotation.y += 0.04;
         }
         if (kanan) {
@@ -343,6 +259,7 @@ class Mobil {
 
 class ObjekKumpul {
     constructor(x, z) {
+
         this.group = new THREE.Group();
 
         const geo = new THREE.IcosahedronGeometry(0.8, 1);
@@ -393,7 +310,6 @@ class ObjekKumpul {
         this.dikumpulkan = true;
     }
 }
-
 
 function buatEfekKumpul(pos) {
     const count = 12;
@@ -450,7 +366,7 @@ function buatLingkungan() {
     ];
 
     obsData.forEach(d => {
-        const hw = 15 / 2; 
+        const hw = 15 / 2;
         const obsGeo = new THREE.BoxGeometry(15, d.h, 15);
         const obsMat = new THREE.MeshStandardMaterial({ color: d.color, metalness: 0.4, roughness: 0.6 });
         const obs = new THREE.Mesh(obsGeo, obsMat);
@@ -544,7 +460,6 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-
 let flashTimer = 0;
 let lastHitObstacle = null;
 
@@ -575,8 +490,8 @@ function deteksiTabrakanTembok() {
             pos.z += nz * penetrasi;
 
             const dot = vel.x * nx + vel.z * nz;
-            if (dot < 0) { 
-                const restitusi = 0.35; 
+            if (dot < 0) {
+                const restitusi = 0.35;
                 vel.x -= (1 + restitusi) * dot * nx;
                 vel.z -= (1 + restitusi) * dot * nz;
                 vel.multiplyScalar(0.6);
@@ -586,6 +501,10 @@ function deteksiTabrakanTembok() {
                 lastHitObstacle = ob.mesh;
                 const origColor = ob.mesh.material.color.clone();
                 ob.mesh.material.color.set(0xff2200);
+
+                gameState.combo = 0;
+                gameState.score = Math.max(0, gameState.score - 100);
+
                 setTimeout(() => {
                     ob.mesh.material.color.copy(origColor);
                     lastHitObstacle = null;
@@ -595,7 +514,7 @@ function deteksiTabrakanTembok() {
     });
 
     if (hit) {
-        flashTimer = 8; 
+        flashTimer = 8;
     }
     if (flashTimer > 0) {
         flashTimer--;
@@ -614,7 +533,6 @@ function deteksiTabrakanTembok() {
         overlay.style.opacity = (flashTimer / 8).toFixed(2);
     }
 }
-
 
 function deteksiTabrakan() {
     const posMobil = mobil.getPosition();
@@ -687,12 +605,11 @@ function animate() {
 
     if (gameState.isGameRunning) {
         mobil.update(keys);
-        deteksiTabrakanTembok();  
+        deteksiTabrakanTembok();
         deteksiTabrakan();
     }
 
     objekKumpul.forEach(obj => obj.update());
-    updateHover();
     updateCamera();
     updateUI();
 
