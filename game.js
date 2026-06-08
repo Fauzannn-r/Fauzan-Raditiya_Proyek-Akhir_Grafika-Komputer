@@ -1,8 +1,4 @@
-// ============================================
-// KUMPUL MOBIL - Game Three.js
-// ============================================
 
-// Setup Scene
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0f0f1e);
 scene.fog = new THREE.Fog(0x0f0f1e, 800, 1500);
@@ -16,13 +12,11 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.outputEncoding = THREE.sRGBEncoding;  // FIX: warna GLB lebih akurat
+renderer.outputEncoding = THREE.sRGBEncoding; 
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 
-// ============================================
-// VARIABEL GAME
-// ============================================
+
 const gameState = {
     score: 0,
     collected: 0,
@@ -34,17 +28,13 @@ const gameState = {
 const keys = {};
 let cameraAngle = 0;
 
-// Array menyimpan data AABB setiap obstacle untuk collision
 const obstacles = [];
 
-// ============================================
-// RAYCASTER UNTUK HOVER MOUSE
-// ============================================
+
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let hoveredObjek = null;
 
-// Tooltip element
 const tooltip = document.createElement('div');
 tooltip.id = 'hoverTooltip';
 tooltip.style.cssText = `
@@ -65,13 +55,11 @@ canvas.addEventListener('mousemove', (e) => {
     tooltip.style.top  = (e.clientY - 10) + 'px';
 });
 
-// Klik mouse — kumpulkan objek yang di-hover
 canvas.addEventListener('click', () => {
     if (hoveredObjek && !hoveredObjek.dikumpulkan) {
         const idx = objekKumpul.indexOf(hoveredObjek);
         if (idx !== -1) {
             const posKumpul = hoveredObjek.getPosition();
-            // Cek jarak — hanya bisa klik jika dekat (radius 20)
             const dist = mobil.getPosition().distanceTo(posKumpul);
             if (dist < 20) {
                 hoveredObjek.remove();
@@ -85,7 +73,7 @@ canvas.addEventListener('click', () => {
                 hoveredObjek = null;
                 tooltip.style.display = 'none';
             } else {
-                // Terlalu jauh — flash tooltip merah
+  
                 tooltip.textContent = '❌ Terlalu jauh!';
                 tooltip.style.borderColor = '#ff4444';
                 tooltip.style.color = '#ff4444';
@@ -99,7 +87,6 @@ canvas.addEventListener('click', () => {
 function updateHover() {
     raycaster.setFromCamera(mouse, camera);
 
-    // Kumpulkan semua mesh dari objekKumpul
     const meshes = objekKumpul
         .filter(o => !o.dikumpulkan)
         .map(o => ({ objek: o, mesh: o.mesh }));
@@ -112,14 +99,12 @@ function updateHover() {
         const found = meshes.find(m => m.mesh === hitMesh);
         if (found) {
             if (hoveredObjek !== found.objek) {
-                // Reset objek sebelumnya
                 if (hoveredObjek) {
                     hoveredObjek.mesh.material.emissiveIntensity = 0.5;
                     hoveredObjek.group.scale.setScalar(1.0);
                 }
                 hoveredObjek = found.objek;
             }
-            // Efek hover: terang + scale up
             hoveredObjek.mesh.material.emissiveIntensity = 1.5;
             hoveredObjek.group.scale.setScalar(1.25);
 
@@ -132,7 +117,6 @@ function updateHover() {
             canvas.style.cursor = bisa ? 'pointer' : 'not-allowed';
         }
     } else {
-        // Tidak ada yang di-hover
         if (hoveredObjek) {
             hoveredObjek.mesh.material.emissiveIntensity = 0.5;
             hoveredObjek.group.scale.setScalar(1.0);
@@ -143,9 +127,6 @@ function updateHover() {
     }
 }
 
-// ============================================
-// CLASS: MOBIL
-// ============================================
 class Mobil {
     constructor() {
         this.group = new THREE.Group();
@@ -186,7 +167,6 @@ class Mobil {
 
         this.showToast('⏳ Memuat mobil.glb...', '#00d4ff');
 
-        // Coba semua kemungkinan nama file (case-insensitive workaround)
         const paths = ['mobil.glb', './mobil.glb', 'Mobil.glb', './Mobil.glb'];
 
         const tryNext = (i) => {
@@ -252,7 +232,7 @@ class Mobil {
     createFallbackModel() {
         const group = new THREE.Group();
 
-        // Body
+  
         const bodyGeo = new THREE.BoxGeometry(2, 1.5, 4);
         const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff0055, metalness: 0.6, roughness: 0.3 });
         this.body = new THREE.Mesh(bodyGeo, bodyMat);
@@ -260,7 +240,6 @@ class Mobil {
         this.body.receiveShadow = true;
         group.add(this.body);
 
-        // Roof
         const roofGeo = new THREE.BoxGeometry(1.8, 0.8, 2);
         const roofMat = new THREE.MeshStandardMaterial({ color: 0xff0055, metalness: 0.6, roughness: 0.3 });
         const roof = new THREE.Mesh(roofGeo, roofMat);
@@ -270,7 +249,6 @@ class Mobil {
         roof.receiveShadow = true;
         group.add(roof);
 
-        // Windshield (kaca)
         const windGeo = new THREE.BoxGeometry(1.6, 0.7, 0.1);
         const windMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, metalness: 0.1, roughness: 0.0, transparent: true, opacity: 0.6 });
         const windshield = new THREE.Mesh(windGeo, windMat);
@@ -278,7 +256,6 @@ class Mobil {
         windshield.rotation.x = -0.3;
         group.add(windshield);
 
-        // Lampu depan
         const headGeo = new THREE.SphereGeometry(0.2, 8, 8);
         const headMat = new THREE.MeshStandardMaterial({ color: 0xffffaa, emissive: 0xffffaa, emissiveIntensity: 0.8 });
         [-0.6, 0.6].forEach(x => {
@@ -287,7 +264,6 @@ class Mobil {
             group.add(head);
         });
 
-        // Wheels
         const wheelGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.5, 16);
         const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.3, roughness: 0.8 });
         const hubGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.55, 8);
@@ -318,10 +294,8 @@ class Mobil {
         const kiri   = keys['a'] || keys['A'] || keys['ArrowLeft'];
         const kanan  = keys['d'] || keys['D'] || keys['ArrowRight'];
 
-        // Sudut hadap mobil saat ini
         const angle = this.group.rotation.y;
 
-        // Vektor maju = arah hadap mobil di bidang XZ
         const forwardX = Math.sin(angle);
         const forwardZ = Math.cos(angle);
 
@@ -336,7 +310,6 @@ class Mobil {
             move.z -= forwardZ * this.acceleration;
         }
         if (kiri) {
-            // Belok: putar badan mobil saja, bukan geser samping
             this.group.rotation.y += 0.04;
         }
         if (kanan) {
@@ -368,12 +341,8 @@ class Mobil {
     getCollisionSphere() { return { center: this.getPosition(), radius: this.collisionRadius }; }
 }
 
-// ============================================
-// CLASS: OBJEK KUMPUL
-// ============================================
 class ObjekKumpul {
     constructor(x, z) {
-        // Buat grup dengan beberapa bentuk biar lebih menarik
         this.group = new THREE.Group();
 
         const geo = new THREE.IcosahedronGeometry(0.8, 1);
@@ -388,7 +357,6 @@ class ObjekKumpul {
         this.mesh.castShadow = true;
         this.group.add(this.mesh);
 
-        // Cincin di sekeliling
         const ringGeo = new THREE.TorusGeometry(1.2, 0.08, 8, 32);
         const ringMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.4 });
         this.ring = new THREE.Mesh(ringGeo, ringMat);
@@ -426,9 +394,7 @@ class ObjekKumpul {
     }
 }
 
-// ============================================
-// EFEK PARTIKEL SAAT KUMPUL
-// ============================================
+
 function buatEfekKumpul(pos) {
     const count = 12;
     for (let i = 0; i < count; i++) {
@@ -460,11 +426,8 @@ function buatEfekKumpul(pos) {
     }
 }
 
-// ============================================
-// BUAT LINGKUNGAN
-// ============================================
 function buatLingkungan() {
-    // Ground
+
     const groundGeo = new THREE.PlaneGeometry(400, 400);
     const groundMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, metalness: 0.1, roughness: 0.9 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
@@ -472,12 +435,10 @@ function buatLingkungan() {
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Grid
     const grid = new THREE.GridHelper(400, 40, 0x00d4ff, 0x004080);
     grid.position.y = 0.01;
     scene.add(grid);
 
-    // Obstacles - lebih beragam
     const obsData = [
         { pos: [-80, -80], color: 0x334455, h: 20 },
         { pos: [80, 80],   color: 0x334455, h: 15 },
@@ -489,7 +450,7 @@ function buatLingkungan() {
     ];
 
     obsData.forEach(d => {
-        const hw = 15 / 2; // half-width
+        const hw = 15 / 2; 
         const obsGeo = new THREE.BoxGeometry(15, d.h, 15);
         const obsMat = new THREE.MeshStandardMaterial({ color: d.color, metalness: 0.4, roughness: 0.6 });
         const obs = new THREE.Mesh(obsGeo, obsMat);
@@ -498,7 +459,6 @@ function buatLingkungan() {
         obs.receiveShadow = true;
         scene.add(obs);
 
-        // Simpan AABB (axis-aligned bounding box) obstacle di bidang XZ
         obstacles.push({
             mesh: obs,
             minX: d.pos[0] - hw,
@@ -507,7 +467,6 @@ function buatLingkungan() {
             maxZ: d.pos[1] + hw,
         });
 
-        // Garis neon di tepi bangunan
         const edgeGeo = new THREE.EdgesGeometry(obsGeo);
         const edgeMat = new THREE.LineBasicMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.3 });
         const edges = new THREE.LineSegments(edgeGeo, edgeMat);
@@ -515,7 +474,6 @@ function buatLingkungan() {
         scene.add(edges);
     });
 
-    // Lights
     const ambient = new THREE.AmbientLight(0xffffff, 0.9);
     scene.add(ambient);
 
@@ -531,7 +489,6 @@ function buatLingkungan() {
     direct.shadow.camera.far = 500;
     scene.add(direct);
 
-    // Hemisphere light untuk ambient lebih natural
     const hemi = new THREE.HemisphereLight(0x0033ff, 0x001100, 0.3);
     scene.add(hemi);
 
@@ -544,9 +501,6 @@ function buatLingkungan() {
     scene.add(point2);
 }
 
-// ============================================
-// INISIALISASI
-// ============================================
 buatLingkungan();
 
 const axesHelper = new THREE.AxesHelper(10);
@@ -565,9 +519,6 @@ function spawnObjekKumpul(count = 15) {
 
 spawnObjekKumpul(15);
 
-// ============================================
-// EVENT LISTENERS
-// ============================================
 document.addEventListener('keydown', (e) => {
     keys[e.key] = true;
 
@@ -593,9 +544,7 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// ============================================
-// DETEKSI TABRAKAN TEMBOK / BALOK
-// ============================================
+
 let flashTimer = 0;
 let lastHitObstacle = null;
 
@@ -606,7 +555,7 @@ function deteksiTabrakanTembok() {
     let   hit   = false;
 
     obstacles.forEach(ob => {
-        // Temukan titik terdekat di AABB ke pusat mobil
+
         const nearX = Math.max(ob.minX, Math.min(pos.x, ob.maxX));
         const nearZ = Math.max(ob.minZ, Math.min(pos.z, ob.maxZ));
 
@@ -617,27 +566,22 @@ function deteksiTabrakanTembok() {
         if (dist < r) {
             hit = true;
 
-            // Kedalaman penetrasi
             const penetrasi = r - dist;
 
-            // Arah dorong (normal keluar dari obstacle)
             const nx = dist > 0 ? dx / dist : 1;
             const nz = dist > 0 ? dz / dist : 0;
 
-            // Dorong mobil keluar dari tembok
             pos.x += nx * penetrasi;
             pos.z += nz * penetrasi;
 
-            // Pantulkan komponen velocity searah normal (bounce + redaman)
             const dot = vel.x * nx + vel.z * nz;
-            if (dot < 0) { // hanya saat menuju tembok
-                const restitusi = 0.35; // koefisien pantul (0=nyerap, 1=elastis penuh)
+            if (dot < 0) { 
+                const restitusi = 0.35; 
                 vel.x -= (1 + restitusi) * dot * nx;
                 vel.z -= (1 + restitusi) * dot * nz;
-                vel.multiplyScalar(0.6); // redaman ekstra saat tabrak
+                vel.multiplyScalar(0.6);
             }
 
-            // Flash tembok yang kena tabrak
             if (ob.mesh !== lastHitObstacle) {
                 lastHitObstacle = ob.mesh;
                 const origColor = ob.mesh.material.color.clone();
@@ -650,13 +594,12 @@ function deteksiTabrakanTembok() {
         }
     });
 
-    // Flash layar merah saat tabrak
     if (hit) {
-        flashTimer = 8; // frame
+        flashTimer = 8; 
     }
     if (flashTimer > 0) {
         flashTimer--;
-        // Overlay merah di canvas — pakai HUD sederhana
+
         let overlay = document.getElementById('hitOverlay');
         if (!overlay) {
             overlay = document.createElement('div');
@@ -699,9 +642,6 @@ function deteksiTabrakan() {
     });
 }
 
-// ============================================
-// UPDATE UI
-// ============================================
 let frameCount = 0;
 let lastTime = Date.now();
 
@@ -724,20 +664,14 @@ function updateUI() {
     document.getElementById('time').textContent = elapsed + 's';
 }
 
-// ============================================
-// CAMERA FOLLOW
-// ============================================
 function updateCamera() {
     const pos = mobil.getPosition();
     const dist = 20;
     const height = 12;
 
-    // Ikuti arah hadap mobil, bukan cameraAngle manual saja
-    // cameraAngle dipakai sebagai offset tambahan (tombol R)
     const carAngle = mobil.group.rotation.y;
     const angle = carAngle + cameraAngle;
 
-    // Kamera di belakang mobil (tambah PI = balik 180 derajat dari arah hadap)
     const tx = pos.x - Math.sin(angle) * dist;
     const tz = pos.z - Math.cos(angle) * dist;
 
@@ -748,15 +682,12 @@ function updateCamera() {
     camera.lookAt(pos.x, pos.y + 1, pos.z);
 }
 
-// ============================================
-// ANIMATION LOOP
-// ============================================
 function animate() {
     requestAnimationFrame(animate);
 
     if (gameState.isGameRunning) {
         mobil.update(keys);
-        deteksiTabrakanTembok();  // cek tembok dulu sebelum collectible
+        deteksiTabrakanTembok();  
         deteksiTabrakan();
     }
 
